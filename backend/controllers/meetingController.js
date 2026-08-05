@@ -1,0 +1,241 @@
+const Meeting = require('../models/Meeting');
+
+// @desc    Get all meetings
+// @route   GET /api/meetings
+// @access  Public
+exports.getMeetings = async (req, res) => {
+  try {
+    const meetings = await Meeting.find().populate('organizer', 'name email role').sort('-date');
+
+    const now = new Date();
+    const enriched = meetings.map(m => {
+      const obj = m.toObject();
+      const meetingDate = new Date(obj.date);
+      const startDate = new Date(obj.date);
+
+      if (obj.startTime) {
+        const [h, min] = obj.startTime.split(':').map(Number);
+        startDate.setHours(h, min, 0, 0);
+      }
+
+      if (obj.endTime) {
+        const [h, min] = obj.endTime.split(':').map(Number);
+        meetingDate.setHours(h, min, 0, 0);
+      }
+
+      if (meetingDate < startDate) {
+        meetingDate.setDate(meetingDate.getDate() + 1);
+      }
+
+      if (obj.status !== 'cancelled' && obj.status !== 'ongoing') {
+        obj.status = meetingDate < now ? 'completed' : 'upcoming';
+      }
+      return obj;
+    });
+
+    res.status(200).json({ success: true, count: enriched.length, data: enriched });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Get single meeting
+// @route   GET /api/meetings/:id
+// @access  Public
+exports.getMeeting = async (req, res) => {
+  try {
+    const meeting = await Meeting.findById(req.params.id)
+      .populate('organizer', 'name email role')
+      .populate('attendees', 'name district');
+
+    if (!meeting) {
+      return res.status(404).json({ success: false, message: 'Meeting not found' });
+    }
+
+    res.status(200).json({ success: true, data: meeting });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Helper to check if a meeting has ended based on date + endTime
+const isMeetingEnded = (meeting) => {
+  const end = new Date(meeting.date);
+  const start = new Date(meeting.date);
+  
+  if (meeting.startTime) {
+    const [startH, startMin] = meeting.startTime.split(':').map(Number);
+    start.setHours(startH, startMin, 0, 0);
+  }
+
+  if (meeting.endTime) {
+    const [endH, endMin] = meeting.endTime.split(':').map(Number);
+    end.setHours(endH, endMin, 0, 0);
+  }
+  
+  if (end < start) {
+    end.setDate(end.getDate() + 1);
+  }
+  
+  return end < new Date();
+};
+
+// @desc    Create new meeting
+// @route   POST /api/meetings
+// @access  Private (Admin/Moderator)
+exports.createMeeting = async (req, res) => {
+  try {
+    console.log('📅 New meeting request from user:', req.user.id);
+    console.log('📦 Data received:', req.body);
+    
+    // Validate past dates - combine date + startTime then compare
+    const meetingDate = new Date(req.body.date);
+    if (req.body.startTime) {
+      const [h, min] = req.body.startTime.split(':').map(Number);
+      // Treat startTime as local time (UTC+3 for Somalia), convert to UTC for comparison
+      meetingDate.setUTCHours(h - 3, min, 0, 0); // subtract offset to get UTC
+    }
+    if (meetingDate < new Date()) {
+      return res.status(400).json({ success: false, message: 'Cannot schedule a meeting in the past' });
+    }
+    
+    req.body.organizer = req.user.id; 
+    
+    const meeting = await Meeting.create(req.body);
+    console.log('✅ Meeting created successfully:', meeting._id);
+    
+    res.status(201).json({ success: true, data: meeting });
+  } catch (error) {
+    console.error('❌ Error creating meeting:', error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Join/RSVP for a meeting
+// @route   POST /api/meetings/:id/join
+// @access  Private
+exports.joinMeeting = async (req, res) => {
+  try {
+    const meeting = await Meeting.findById(req.params.id);
+
+    if (!meeting) {
+      return res.status(404).json({ success: false, message: 'Meeting not found' });
+    }
+
+    // Block joining past or cancelled meetings
+    if (meeting.status === 'cancelled') {
+      return res.status(400).json({ success: false, message: 'This meeting has been cancelled' });
+    }
+    if (isMeetingEnded(meeting) && meeting.status !== 'ongoing') {
+      return res.status(400).json({ success: false, message: 'This meeting has ended and is no longer accepting RSVPs' });
+    }
+
+    // Check if already joined
+    if (meeting.attendees.includes(req.user.id)) {
+      return res.status(400).json({ success: false, message: 'You have already joined this meeting' });
+    }
+
+    meeting.attendees.push(req.user.id);
+    await meeting.save();
+
+    res.status(200).json({ success: true, data: meeting });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Delete meeting
+// @route   DELETE /api/meetings/:id
+// @access  Private (Admin only)
+exports.deleteMeeting = async (req, res) => {
+  try {
+    const meeting = await Meeting.findById(req.params.id);
+
+    if (!meeting) {
+      return res.status(404).json({ success: false, message: 'Meeting not found' });
+    }
+
+    await meeting.deleteOne();
+
+    res.status(200).json({ success: true, message: 'Meeting removed' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Update meeting
+// @route   PUT /api/meetings/:id
+// @access  Private (Admin/Moderator)
+exports.updateMeeting = async (req, res) => {
+  try {
+    let meeting = await Meeting.findById(req.params.id);
+
+    if (!meeting) {
+      return res.status(404).json({ success: false, message: 'Meeting not found' });
+    }
+
+    // Check if status is being updated to 'cancelled'
+    const isCancelling = req.body.status === 'cancelled' && meeting.status !== 'cancelled';
+
+    // Prevent moving to a past date on update restriction removed per user request
+
+    meeting = await Meeting.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true
+    }).populate('organizer', 'name email role');
+
+    if (isCancelling) {
+      console.log(`📣 Meeting ${meeting._id} cancelled. Sending notifications to all citizens...`);
+      try {
+        const User = require('../models/User');
+        const Notification = require('../models/Notification');
+        const sendEmail = require('../utils/sendEmail');
+        const sendSMS = require('../utils/sendSMS');
+
+        const citizens = await User.find({ role: 'citizen' });
+        
+        const notificationPromises = citizens.map(async (citizen) => {
+          // 1. Create in-app notification
+          await Notification.create({
+            recipient: citizen._id,
+            type: 'system_alert',
+            title: 'Meeting Cancelled',
+            message: `The meeting "${meeting.title}" scheduled for ${new Date(meeting.date).toLocaleString()} has been cancelled.`,
+            link: `/dashboard/meetings/${meeting._id}`
+          });
+
+          // 2. Send Email
+          if (citizen.email) {
+            try {
+              await sendEmail({
+                email: citizen.email,
+                subject: `Cancelled: Public Meeting - ${meeting.title}`,
+                message: `Dear ${citizen.name},\n\nPlease note that the public meeting "${meeting.title}" has been cancelled.\nDate scheduled: ${new Date(meeting.date).toLocaleString()}\n\nBest regards,\nPMCFMS Team`
+              });
+            } catch (err) {
+              console.error(`Error sending cancellation email to ${citizen.email}:`, err.message);
+            }
+          }
+
+          // 3. Send SMS
+          if (citizen.phone) {
+            try {
+              const smsMessage = `PMCFMS Alert: Meeting "${meeting.title}" on ${new Date(meeting.date).toLocaleDateString()} has been cancelled.`;
+              await sendSMS(citizen.phone, smsMessage);
+            } catch (err) {
+              console.error(`Error sending cancellation SMS to ${citizen.phone}:`, err.message);
+            }
+          }
+        });
+
+        await Promise.all(notificationPromises);
+      } catch (err) {
+        console.error('Error processing cancellation notifications:', err);
+      }
+    }
+
+    res.status(200).json({ success: true, data: meeting });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};

@@ -1,0 +1,226 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* Primary brand - Emerald Green */
+  --color-primary: #10B981;
+  --color-primary-hover: #059669;
+  --color-primary-glow: rgba(16, 185, 129, 0.2);
+
+  /* Accent - Indigo */
+  --color-accent: #6366F1;
+  --color-accent-hover: #4F46E5;
+
+  /* Semantic */
+  --color-success: #10B981;
+  --color-success-glow: rgba(16, 185, 129, 0.2);
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+
+  /* Light backgrounds */
+  --color-bg-base: #F1F5F9;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-surface: #F8FAFC;
+  --color-bg-hover: #F0F9FF;
+
+  /* Light text */
+  --color-text: #0F172A;
+  --color-text-muted: #475569;
+  --color-text-subtle: #94A3B8;
+
+  /* Light borders */
+  --color-border: rgba(0, 0, 0, 0.07);
+  --color-border-strong: rgba(16, 185, 129, 0.4);
+
+  /* Public (light) pages */
+  --color-background: #F1F5F9;
+  --color-surface: #FFFFFF;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+/* Dark Mode Overrides */
+.dark {
+  --color-primary: #10B981;
+  --color-primary-hover: #059669;
+  --color-primary-glow: rgba(16, 185, 129, 0.2);
+
+  --color-bg-base: #020617;        /* slate-950 */
+  --color-bg-elevated: #0F172A;    /* slate-900 */
+  --color-bg-surface: #1E293B;     /* slate-800 */
+  --color-bg-hover: #334155;       /* slate-700 */
+
+  --color-text: #F8FAFC;           /* slate-50 */
+  --color-text-muted: #94A3B8;     /* slate-400 */
+  --color-text-subtle: #475569;    /* slate-600 */
+
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-strong: rgba(16, 185, 129, 0.4);
+
+  --color-background: #020617;
+  --color-surface: #0F172A;
+}
+
+
+/* ─── Base ─────────────────────────────────── */
+@layer base {
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: "Inter", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: var(--color-background);
+    color: #0F172A;
+    min-height: 100vh;
+  }
+
+  /* Premium scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(16, 185, 129, 0.35);
+    border-radius: 100px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(16, 185, 129, 0.6);
+  }
+}
+
+/* ─── Utilities ─────────────────────────────── */
+@layer utilities {
+
+  /* Glass - light (public pages) */
+  .glass {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.5);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+  }
+
+  /* Glass - dark (dashboard) */
+  .glass-dark {
+    background: rgba(13, 27, 46, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--color-border);
+  }
+
+  /* Card dark */
+  .card-dark {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .card-dark:hover {
+    border-color: var(--color-border-strong);
+    box-shadow: 0 0 0 1px var(--color-border-strong), 0 8px 32px rgba(0,0,0,0.35);
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, #10B981 0%, #8B5CF6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .gradient-text-teal {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glow */
+  .glow-primary {
+    box-shadow: 0 0 24px var(--color-primary-glow), 0 0 60px rgba(16,185,129,0.1);
+  }
+  .glow-success {
+    box-shadow: 0 0 24px var(--color-success-glow);
+  }
+
+  /* Hover lift */
+  .hover-lift {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+  }
+
+  /* Badges */
+  .badge-active {
+    background: rgba(16,185,129,0.15);
+    color: #10B981;
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 100px;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .badge-pending {
+    background: rgba(245,158,11,0.15);
+    color: #F59E0B;
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 100px;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-closed {
+    background: rgba(239,68,68,0.15);
+    color: #EF4444;
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 100px;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* Input dark */
+  .input-dark {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    border-radius: 12px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+  .input-dark::placeholder { color: var(--color-text-subtle); }
+  .input-dark:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-glow);
+  }
+
+  /* ─── Animations ─── */
+  @keyframes blob {
+    0%   { transform: translate(0,0) scale(1); }
+    33%  { transform: translate(30px,-50px) scale(1.1); }
+    66%  { transform: translate(-20px,20px) scale(0.9); }
+    100% { transform: translate(0,0) scale(1); }
+  }
+  .animate-blob { animation: blob 7s infinite; }
+  .animation-delay-2000 { animation-delay: 2s; }
+  .animation-delay-4000 { animation-delay: 4s; }
+
+  @keyframes shimmer { 100% { transform: translateX(100%); } }
+  .animate-shimmer { animation: shimmer 2s infinite; }
+
+  @keyframes pulse-glow {
+    0%,100% { box-shadow: 0 0 8px rgba(16,185,129,0.4); }
+    50%      { box-shadow: 0 0 28px rgba(16,185,129,0.75); }
+  }
+  .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+  @keyframes fadeInUp {
+    from { opacity:0; transform:translateY(16px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .animate-fadeInUp { animation: fadeInUp 0.4s ease forwards; }
+}
