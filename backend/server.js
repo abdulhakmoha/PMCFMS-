@@ -14,15 +14,27 @@ const app = express();
 app.use(express.json());
 // CORS Configuration
 const corsOptions = {
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    /\.vercel\.app$/,  // Allow all vercel.app subdomains
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    // Allow localhost and all vercel.app domains
+    if (
+      origin.includes('localhost') ||
+      origin.includes('vercel.app') ||
+      origin.includes('127.0.0.1')
+    ) {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200,
 };
+
+// Handle preflight requests for all routes
+app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
 app.use((req, res, next) => {
