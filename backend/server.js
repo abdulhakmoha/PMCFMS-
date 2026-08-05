@@ -12,7 +12,18 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+// CORS Configuration
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    /\.vercel\.app$/,  // Allow all vercel.app subdomains
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+app.use(cors(corsOptions));
 
 app.use((req, res, next) => {
   console.log(`📡 [PORT 5001] ${req.method} ${req.url} - Auth: ${req.headers.authorization ? req.headers.authorization.substring(0, 25) + '...' : 'None'}`);
