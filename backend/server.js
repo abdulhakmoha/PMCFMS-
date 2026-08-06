@@ -1,6 +1,5 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
 const path = require('path');
 const dotenv = require('dotenv');
 const authRoutes = require('./routes/authRoutes');
@@ -10,35 +9,28 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
-app.use(express.json());
-// CORS Configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-    // Allow localhost and all vercel.app domains
-    if (
-      origin.includes('localhost') ||
-      origin.includes('vercel.app') ||
-      origin.includes('127.0.0.1')
-    ) {
-      return callback(null, true);
-    }
-    callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200,
-};
+// Manual CORS middleware - must be FIRST before everything
+app.use((req, res, next) => {
+  const origin = req.headers.origin || '';
+  // Allow vercel.app domains and localhost
+  if (origin.includes('vercel.app') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
 
-// Handle preflight requests for all routes
-app.options('*', cors(corsOptions));
-app.use(cors(corsOptions));
+  // Immediately respond to preflight OPTIONS requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
+app.use(express.json());
 
 app.use((req, res, next) => {
-  console.log(`📡 [PORT 5001] ${req.method} ${req.url} - Auth: ${req.headers.authorization ? req.headers.authorization.substring(0, 25) + '...' : 'None'}`);
+  console.log(`📡 ${req.method} ${req.url}`);
   next();
 });
 
